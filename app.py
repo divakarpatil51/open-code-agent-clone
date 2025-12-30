@@ -1,10 +1,9 @@
+from rich.text import Text
 from textual import work
 import json
-from rich.segment import Segment
-import rich.console
 from textual.reactive import reactive
 import ollama
-from agent import Agent
+from agent import Agent, Role
 from textual.widget import Widget
 from textual.containers import (
     Horizontal,
@@ -17,25 +16,9 @@ from textual.widgets import (
     Input,
     Label,
     Rule,
-    RichLog,
     LoadingIndicator,
+    TextArea,
 )
-
-
-class ChatMessage:
-    def __init__(self, message: ollama.Message):
-        self.message: ollama.Message = message
-
-    def __rich_console__(self, console, console_options) -> rich.console.RenderResult:
-        if self.message.role.lower() == "user":
-            yield Segment(f"👤: {self.message.content}")
-        else:
-            try:
-                data = json.loads(self.message.content or "")
-                yield f"🤖: {data.values()}"
-            except json.JSONDecodeError:
-                yield f"🤖: {self.message.content}"
-        yield "\n"
 
 
 class Token(Label):
@@ -71,6 +54,27 @@ class DoneReason(Label):
             return
         emoji = "✓" if updated_value == "stop" else "⚠️"
         self.update(f"{emoji} Status: {updated_value}")
+
+
+class ChatTextArea(TextArea):
+    content = reactive(ollama.Message(role="none", content=""))
+
+    def watch_content(self, updated_content: ollama.Message):
+        if not updated_content.content:
+            return
+
+        if updated_content.role == Role.USER:
+            self.insert(f"👤: {updated_content.content}", self.document.end)
+        else:
+            try:
+                data = json.loads(updated_content.content or "")
+                self.insert(
+                    f"🤖: {Text.from_markup(json.dumps(data, indent=4))}",
+                    self.document.end,
+                )
+            except json.JSONDecodeError:
+                self.insert(f"🤖: {updated_content.content}", self.document.end)
+        self.insert("\n\n", self.document.end)
 
 
 class ChatWindow(Widget):
@@ -115,7 +119,7 @@ class ChatWindow(Widget):
     def compose(self) -> ComposeResult:
         with Horizontal(id="main-container"):
             with Vertical(id="left-panel"):
-                yield RichLog(id="chat-list", auto_scroll=True, markup=True)
+                yield ChatTextArea(id="chat-list", read_only=True)
                 yield Vertical(
                     Input("Enter your query..", id="query-input"),
                     Model(id="model"),
@@ -148,40 +152,52 @@ class ChatWindow(Widget):
 
         query_input.focus()
 
+    def _update_loader_state(self, display: bool) -> None:
+        self.query_one(LoadingIndicator).display = display
+
+    def _updated_content_from_resp(self, resp: ollama.ChatResponse) -> None:
+        self.query_one("#model", Model).model = resp.model or self.agent.model
+
+        chat_list = self.query_one("#chat-list", ChatTextArea)
+        chat_list.content = resp.message
+
+        self.query_one("#token", Token).token += (resp.prompt_eval_count or 0) + (
+            resp.eval_count or 0
+        )
+
+        if resp.total_duration:
+            duration_sec = resp.total_duration / 1e9
+            self.query_one("#response-time", ResponseTime).duration = duration_sec
+
+        if resp.done_reason:
+            self.query_one("#done-reason", DoneReason).reason = resp.done_reason
+
+        chat_list.scroll_end(animate=False)
+
     @work(thread=True)
     def load_data(self, query: str):
-        chat_list = self.query_one("#chat-list", RichLog)
+        chat_list = self.query_one("#chat-list", ChatTextArea)
         try:
-            self.query_one(LoadingIndicator).display = True
+            self.app.call_from_thread(self._update_loader_state, True)
 
-            chat_list.write(ChatMessage(ollama.Message(role="User", content=query)))
-
-            resp = self.agent.generate_response(query)
-            self.query_one("#model", Model).model = resp.model or self.agent.model
-
-            chat_list.write(ChatMessage(resp.message))
-
-            self.query_one("#token", Token).token += (resp.prompt_eval_count or 0) + (
-                resp.eval_count or 0
+            self.app.call_from_thread(
+                chat_list.__setattr__,
+                "content",
+                ollama.Message(role=Role.USER, content=query),
             )
 
-            if resp.total_duration:
-                duration_sec = resp.total_duration / 1e9
-                self.query_one("#response-time", ResponseTime).duration = duration_sec
+            resp: ollama.ChatResponse = self.agent.generate_response(query)
 
-            if resp.done_reason:
-                self.query_one("#done-reason", DoneReason).reason = resp.done_reason
-
-            chat_list.scroll_end(animate=False)
+            self.app.call_from_thread(self._updated_content_from_resp, resp)
 
         except Exception as e:
-            chat_list.write(
-                ChatMessage(
-                    ollama.Message(role="Assistant", content=f"Error: {str(e)}")
-                )
+            self.app.call_from_thread(
+                chat_list.__setattr__,
+                "content",
+                ollama.Message(role=Role.ASSISTANT, content=f"Error: {str(e)}"),
             )
         finally:
-            self.query_one(LoadingIndicator).display = False
+            self.app.call_from_thread(self._update_loader_state, False)
 
 
 class ChatApp(App):

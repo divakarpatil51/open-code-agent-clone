@@ -59,6 +59,10 @@ class EnvironmentVariableNotSet(Exception): ...
 
 class Agent:
     def __init__(self):
+        self._model = os.getenv("MODEL", "")
+        if not self._model:
+            raise EnvironmentVariableNotSet("Please set MODEL env variable")
+
         self.client = ollama.Client()
         self.messages: list[ollama.Message] = [
             ollama.Message(role=Role.SYSTEM, content=system_prompt)
@@ -165,9 +169,7 @@ class Agent:
 
     @property
     def model(self) -> str:
-        if model := os.getenv("MODEL"):
-            return model
-        raise EnvironmentVariableNotSet("Please set MODEL env variable")
+        return self._model
 
     def get_all_messages(self) -> list[ollama.Message]:
         return self.messages
