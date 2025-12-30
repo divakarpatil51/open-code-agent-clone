@@ -1,5 +1,7 @@
 from rich.text import Text
+import logging
 from textual import work
+from textual.logging import TextualHandler
 import json
 from textual.reactive import reactive
 import ollama
@@ -115,6 +117,10 @@ class ChatWindow(Widget):
         self.query_one("#model", Model).model = self.agent.model
         self.query_one(LoadingIndicator).display = False
         self.query_one("#query-input", Input).focus()
+
+        handler = TextualHandler()
+        logging.getLogger("agent").addHandler(handler)
+        logging.getLogger("agent").setLevel(logging.INFO)
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="main-container"):

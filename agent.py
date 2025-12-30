@@ -2,9 +2,11 @@ import os
 from enum import StrEnum, auto
 from time import time_ns
 from functions import get_file_content, write_file, get_files_info
-from textual import log
+import logging
 
 import ollama
+
+logger = logging.getLogger(__name__)
 
 
 system_prompt = """
@@ -35,9 +37,11 @@ class Role(StrEnum):
 
 def call_function(function_call, verbose=False) -> str:
     if verbose:
-        log(f"Calling function: {function_call.name} ({function_call.arguments})")
+        logger.info(
+            f"Calling function: {function_call.name} ({function_call.arguments})"
+        )
     else:
-        log(f"Calling function: {function_call.name} ")
+        logger.info(f"Calling function: {function_call.name} ")
 
     function_map = {
         "get_file_content": get_file_content,
@@ -79,6 +83,7 @@ class Agent:
         if len(self.messages) <= 20:
             return self.messages
 
+        logger.info("Pruned messages")
         return [self.messages[0]] + self.messages[-19:]
 
     def _generate_response(
@@ -147,16 +152,18 @@ class Agent:
         self.messages.append(response.message)
 
         if not response.message.tool_calls:
-            log(self.messages)
+            logger.info("No tool calls present")
             return accumulated_response
 
         for tool in response.message.tool_calls or []:
+            logger.info(f"Making a call to {tool} tool")
             resp: str = call_function(tool.function, False)
             if resp.startswith("Error"):
                 message = ollama.Message(
                     role=Role.ASSISTANT,
-                    content=f"Some error: {resp}",
+                    content=f"Error: {resp}",
                 )
+                logger.info(f"Error occurred while making a call to {tool} tool")
                 self.messages.append(message)
                 accumulated_response.message = message
                 return accumulated_response
