@@ -75,6 +75,12 @@ class Agent:
             loop_count=1, query_start_time=query_start_time, accumulated_response=None
         )
 
+    def get_active_context(self) -> list[ollama.Message]:
+        if len(self.messages) <= 20:
+            return self.messages
+
+        return [self.messages[0]] + self.messages[-19:]
+
     def _generate_response(
         self,
         loop_count: int = 1,
@@ -112,7 +118,7 @@ class Agent:
 
         response: ollama.ChatResponse = self.client.chat(
             model=self.model,
-            messages=self.messages,
+            messages=self.get_active_context(),
             tools=[get_file_content, get_files_info, write_file],
         )
 
@@ -138,20 +144,14 @@ class Agent:
         else:
             accumulated_response = response
 
+        self.messages.append(response.message)
+
         if not response.message.tool_calls:
-            self.messages.append(response.message)
             log(self.messages)
             return accumulated_response
 
         for tool in response.message.tool_calls or []:
             resp: str = call_function(tool.function, False)
-            self.messages.append(
-                ollama.Message(
-                    role=Role.TOOL,
-                    tool_name=tool.function.name,
-                    content=resp,
-                )
-            )
             if resp.startswith("Error"):
                 message = ollama.Message(
                     role=Role.ASSISTANT,
@@ -160,6 +160,14 @@ class Agent:
                 self.messages.append(message)
                 accumulated_response.message = message
                 return accumulated_response
+
+            self.messages.append(
+                ollama.Message(
+                    role=Role.TOOL,
+                    tool_name=tool.function.name,
+                    content=resp,
+                )
+            )
 
         return self._generate_response(
             loop_count=loop_count + 1,
