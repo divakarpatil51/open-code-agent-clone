@@ -1,4 +1,3 @@
-from rich.text import Text
 import logging
 from textual import work
 from textual.logging import TextualHandler
@@ -71,7 +70,7 @@ class ChatTextArea(TextArea):
             try:
                 data = json.loads(updated_content.content or "")
                 self.insert(
-                    f"🤖: {Text.from_markup(json.dumps(data, indent=4))}",
+                    f"🤖: {json.dumps(data, indent=4)}",
                     self.document.end,
                 )
             except json.JSONDecodeError:
@@ -127,9 +126,9 @@ class ChatWindow(Widget):
             with Vertical(id="left-panel"):
                 yield ChatTextArea(id="chat-list", read_only=True)
                 yield Vertical(
-                    Input("Enter your query..", id="query-input"),
+                    Input(placeholder="Enter your query..", id="query-input"),
                     Model(id="model"),
-                    Horizontal(LoadingIndicator(name="Loading...")),
+                    LoadingIndicator(name="Loading..."),
                     id="left-panel-bottom-container",
                 )
 
@@ -161,7 +160,7 @@ class ChatWindow(Widget):
     def _update_loader_state(self, display: bool) -> None:
         self.query_one(LoadingIndicator).display = display
 
-    def _updated_content_from_resp(self, resp: ollama.ChatResponse) -> None:
+    def _update_content_from_resp(self, resp: ollama.ChatResponse) -> None:
         self.query_one("#model", Model).model = resp.model or self.agent.model
 
         chat_list = self.query_one("#chat-list", ChatTextArea)
@@ -194,7 +193,7 @@ class ChatWindow(Widget):
 
             resp: ollama.ChatResponse = self.agent.generate_response(query)
 
-            self.app.call_from_thread(self._updated_content_from_resp, resp)
+            self.app.call_from_thread(self._update_content_from_resp, resp)
 
         except Exception as e:
             self.app.call_from_thread(
@@ -207,7 +206,7 @@ class ChatWindow(Widget):
 
 
 class ChatApp(App):
-    TITLE = "Open Code Clone"
+    TITLE = "AI Coding Agent"
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)

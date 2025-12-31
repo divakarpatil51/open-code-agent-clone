@@ -161,7 +161,7 @@ class Agent:
             if resp.startswith("Error"):
                 message = ollama.Message(
                     role=Role.ASSISTANT,
-                    content=f"Error: {resp}",
+                    content=f"Tool '{tool.function.name}' failed: {resp}",
                 )
                 logger.info(f"Error occurred while making a call to {tool} tool")
                 self.messages.append(message)
