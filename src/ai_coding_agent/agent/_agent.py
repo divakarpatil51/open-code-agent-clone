@@ -1,7 +1,7 @@
 import os
 from enum import StrEnum, auto
 from time import time_ns
-from functions import get_file_content, write_file, get_files_info
+from ai_coding_agent.tools import get_file_content, write_file, get_files_info
 import logging
 
 import ollama

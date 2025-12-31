@@ -4,7 +4,7 @@ from textual.logging import TextualHandler
 import json
 from textual.reactive import reactive
 import ollama
-from agent import Agent, Role
+from ai_coding_agent.agent import Agent, Role
 from textual.widget import Widget
 from textual.containers import (
     Horizontal,

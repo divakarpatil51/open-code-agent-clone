@@ -10,3 +10,9 @@ dependencies = [
     "textual>=6.11.0",
     "textual-dev>=1.8.0",
 ]
+
+[tool.uv]
+package = true
+
+[project.scripts]
+ai-agent = "ai_coding_agent.__main__:main"

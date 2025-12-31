@@ -2,9 +2,9 @@ import os
 
 READ_SIZE = 10000
 
+
 def get_file_content(wd: str, file_path: str) -> str:
-    """Get file contents for a file path relative to a working directory"""
-    """
+    """Get file contents for a file path relative to a working directory
     Args:
         file_path: Path of the file for which to get file contents
 
@@ -24,12 +24,10 @@ def get_file_content(wd: str, file_path: str) -> str:
         with open(norm_path, mode="r") as f:
             content = f.read(READ_SIZE)
             if f.read(1):
-                content += f"\n.... File {file_path} truncated at {READ_SIZE} characters"
+                content += (
+                    f"\n.... File {file_path} truncated at {READ_SIZE} characters"
+                )
 
         return content
     except Exception as e:
         return f"Error occurred while retreiving file contents: {e}"
-
-
-if __name__ == "__main__":
-    print(get_file_content("calculator", "lorem.txt"))

@@ -530,7 +530,7 @@ wheels = [
 [[package]]
 name = "open-code-agent-clone"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "ollama" },
     { name = "ruff" },

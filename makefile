@@ -6,10 +6,10 @@ load-env:
 	fi
 
 run-app-in-dev-mode: load-env
-	uv run textual run --dev app.py
+	uv run textual run --dev src/ai_coding_agent/__main__.py
 
 run-app: load-env
-	uv run textual run app.py
+	uv run python -m ai_coding_agent
 
 start-textual-console:
 	uv run textual console

@@ -2,8 +2,8 @@ import os
 
 
 def get_files_info(wd: str, directory: str = "."):
-    """Lists files in a specified directory relative to the working directory, providing file size and directory status"""
-    """
+    """Lists files in a specified directory relative to the working directory, providing file size and directory status
+
     Args:
         directory: Directory path to list files from, relative to the working directory (default is the working directory itself)
 
