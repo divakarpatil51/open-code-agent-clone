@@ -5,6 +5,7 @@ description = "A simple opencode agent clone"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "attrs>=25.4.0",
     "ollama==0.6.1",
     "ruff>=0.14.10",
     "textual>=6.11.0",

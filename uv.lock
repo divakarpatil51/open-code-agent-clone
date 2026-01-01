@@ -532,6 +532,7 @@ name = "open-code-agent-clone"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "attrs" },
     { name = "ollama" },
     { name = "ruff" },
     { name = "textual" },
@@ -540,6 +541,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "attrs", specifier = ">=25.4.0" },
     { name = "ollama", specifier = "==0.6.1" },
     { name = "ruff", specifier = ">=0.14.10" },
     { name = "textual", specifier = ">=6.11.0" },

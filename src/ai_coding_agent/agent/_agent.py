@@ -1,12 +1,17 @@
 import os
 from enum import StrEnum, auto
 from time import time_ns
-from ai_coding_agent.tools import get_file_content, write_file, get_files_info
+from ai_coding_agent.tools import (
+    get_file_content,
+    write_file,
+    get_files_info,
+    ToolResponse,
+)
 import logging
 
 import ollama
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("agent")
 
 
 system_prompt = """
@@ -35,7 +40,7 @@ class Role(StrEnum):
     USER = auto()
 
 
-def call_function(function_call, verbose=False) -> str:
+def call_function(function_call, verbose=False) -> ToolResponse:
     if verbose:
         logger.info(
             f"Calling function: {function_call.name} ({function_call.arguments})"
@@ -51,7 +56,7 @@ def call_function(function_call, verbose=False) -> str:
 
     fn = function_map.get(function_call.name)
     if not fn:
-        return f"Error: Invalid function: {function_call.name}"
+        return ToolResponse.error(f"Error: Invalid function: {function_call.name}")
 
     args = dict(function_call.arguments) if function_call.arguments else {}
     args["wd"] = "./calculator"
@@ -157,11 +162,12 @@ class Agent:
 
         for tool in response.message.tool_calls or []:
             logger.info(f"Making a call to {tool} tool")
-            resp: str = call_function(tool.function, False)
-            if resp.startswith("Error"):
+            resp: ToolResponse = call_function(tool.function, False)
+            logger.info(f"Making a call to {resp} tool")
+            if resp.has_error:
                 message = ollama.Message(
                     role=Role.ASSISTANT,
-                    content=f"Tool '{tool.function.name}' failed: {resp}",
+                    content=f"Tool '{tool.function.name}' failed: {resp.error_message}",
                 )
                 logger.info(f"Error occurred while making a call to {tool} tool")
                 self.messages.append(message)
@@ -172,7 +178,7 @@ class Agent:
                 ollama.Message(
                     role=Role.TOOL,
                     tool_name=tool.function.name,
-                    content=resp,
+                    content=resp.content,
                 )
             )
 
