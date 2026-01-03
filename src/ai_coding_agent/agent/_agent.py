@@ -1,12 +1,7 @@
 import os
 from enum import StrEnum, auto
 from time import time_ns
-from ai_coding_agent.tools import (
-    get_file_content,
-    write_file,
-    get_files_info,
-    ToolResponse,
-)
+from ai_coding_agent.tools import available_functions, ToolResponse, ollama_tools
 import logging
 
 import ollama
@@ -48,13 +43,7 @@ def call_function(function_call, verbose=False) -> ToolResponse:
     else:
         logger.info(f"Calling function: {function_call.name} ")
 
-    function_map = {
-        "get_file_content": get_file_content,
-        "get_files_info": get_files_info,
-        "write_file": write_file,
-    }
-
-    fn = function_map.get(function_call.name)
+    fn = available_functions.get(function_call.name)
     if not fn:
         return ToolResponse.error(f"Error: Invalid function: {function_call.name}")
 
@@ -129,7 +118,7 @@ class Agent:
         response: ollama.ChatResponse = self.client.chat(
             model=self.model,
             messages=self.get_active_context(),
-            tools=[get_file_content, get_files_info, write_file],
+            tools=ollama_tools,
         )
 
         # Accumulate metrics from this iteration
